@@ -7,8 +7,7 @@ import {
   DollarSign, MessageSquare, Download, LogOut,
   Activity, FileText, Shield, X, Send, RefreshCw,
   Eye, BarChart2, Zap, Navigation, Filter, Calendar,
-  Wrench, Tag, AlertCircle, Store, Megaphone, Plus,
-  MousePointerClick, Gauge, Power, Satellite,
+  Wrench, Tag, AlertCircle, Store, Gauge, Power, Satellite,
 } from "lucide-react";
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area,
@@ -26,7 +25,7 @@ import {
 } from "./data/mock";
 import { expandTimes, scheduleSummary, nextDeparture, fareLabel } from "./lib/schedule";
 import { postFeedback } from "./lib/api";
-import { ads as seedAds, adCategoryColor, type Ad } from "./data/ads";
+import { ads as seedAds, type Ad } from "./data/ads";
 
 // Suppress Leaflet default icon path issues (we use DivIcon + CircleMarker only)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,10 +33,10 @@ delete (L.Icon.Default.prototype as any)._getIconUrl;
 
 // ─── TYPES ────────────────────────────────────────────────────
 
-type UserRole = "student" | "sedarey" | "espol" | "conductor" | "emprendedor";
+type UserRole = "student" | "sedarey" | "espol" | "conductor";
 type SedareyTab = "monitoreo" | "aforo" | "financiero" | "retroalimentacion" | "supervisor" | "mantenimiento";
 type EspolTab = "kpis" | "satisfaccion" | "reportes" | "alertas";
-type StudentTab = "mapa" | "rutas" | "notificaciones" | "cuenta";
+type StudentTab = "mapa" | "rutas" | "anuncios" | "notificaciones" | "cuenta";
 
 const complianceChartData = routeCompliance.map(r => ({
   route: r.route,
@@ -496,7 +495,7 @@ function LoginScreen({ onSelectRole }: { onSelectRole: (r: UserRole) => void }) 
             Conecta. Monitorea.<br /><span style={{ color: "#005DAA" }}>Decide.</span>
           </h1>
           <p className="text-blue-200 text-lg max-w-2xl mx-auto leading-relaxed">
-            Ecosistema integral del transporte universitario ESPOL. Cinco actores, una sola plataforma basada en datos.
+            Ecosistema integral del transporte universitario ESPOL. Cuatro portales, una sola plataforma basada en datos.
           </p>
         </div>
 
@@ -506,7 +505,6 @@ function LoginScreen({ onSelectRole }: { onSelectRole: (r: UserRole) => void }) 
             { role: "conductor" as UserRole, icon: <Bus className="w-6 h-6" />, title: "Conductor", sub: "App del Conductor", desc: "Tu ruta del día, aforo automático por sensores y GPS dedicado. Sin reportes manuales.", color: "#0E7490", grad: "from-teal-900/50 to-teal-800/20", tag: "Conteo automático" },
             { role: "sedarey" as UserRole, icon: <Activity className="w-6 h-6" />, title: "Cooperativa SEDAREY", sub: "Dashboard Operativo", desc: "Flota, mantenimiento preventivo, kilometraje, finanzas y retroalimentación.", color: "#0891B2", grad: "from-cyan-900/50 to-cyan-800/20", tag: "7 buses activos" },
             { role: "espol" as UserRole, icon: <Shield className="w-6 h-6" />, title: "Bienestar Politécnico", sub: "Auditoría Institucional", desc: "KPIs de cumplimiento contractual, satisfacción y desempeño histórico de SEDAREY.", color: "#7C3AED", grad: "from-purple-900/50 to-purple-800/20", tag: "Auditoría" },
-            { role: "emprendedor" as UserRole, icon: <Store className="w-6 h-6" />, title: "Emprendedor", sub: "Portal de Negocios", desc: "Publica ofertas a la comunidad politécnica en el momento exacto de su traslado.", color: "#B45309", grad: "from-amber-900/50 to-amber-800/20", tag: "Economía circular" },
           ].map(item => (
             <button key={item.role} onClick={() => onSelectRole(item.role)}
               className={`group bg-gradient-to-br ${item.grad} border border-white/10 rounded-2xl p-5 text-left hover:border-white/25 hover:scale-[1.02] transition-all duration-200 cursor-pointer`}>
@@ -532,6 +530,30 @@ function LoginScreen({ onSelectRole }: { onSelectRole: (r: UserRole) => void }) 
 
 // ─── PUBLICIDAD IN-APP (negocios politécnicos) ────────────────
 
+// Hoja de detalle de una oferta (compartida por el carrusel y la pestaña Ofertas)
+function AdDetailSheet({ ad, onClose }: { ad: Ad; onClose: () => void }) {
+  return (
+    <div className="absolute inset-0 z-[2000] bg-black/40 flex items-end" onClick={onClose}>
+      <div className="w-full bg-white rounded-t-3xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="h-28 flex items-center justify-center text-5xl relative" style={{ background: `${ad.color}18` }}>
+          {ad.emoji}
+          <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center"><X className="w-4 h-4 text-gray-600" /></button>
+          <span className="absolute top-3 left-3 text-[9px] font-bold text-white px-2 py-0.5 rounded-full" style={{ background: ad.color }}>{ad.category}</span>
+        </div>
+        <div className="p-4">
+          <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: ad.color }}>{ad.business}</div>
+          <h3 className="font-extrabold text-[#1C2B3A] text-lg leading-tight mt-0.5">{ad.title}</h3>
+          <p className="text-sm text-gray-500 mt-2 leading-relaxed">{ad.desc}</p>
+          <div className="text-[11px] text-gray-400 mt-2">Anunciante: {ad.owner}</div>
+          <button className="w-full mt-4 py-3 rounded-xl text-white font-extrabold text-sm" style={{ background: ad.color }}>{ad.cta}</button>
+          <p className="text-center text-[10px] text-gray-400 mt-2">Contenido patrocinado · PoliBus no cobra al estudiante</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Carrusel compacto en el mapa (durante el traslado)
 function PromoStrip() {
   const active = seedAds.filter(a => a.active);
   const [open, setOpen] = useState<Ad | null>(null);
@@ -555,26 +577,57 @@ function PromoStrip() {
           </button>
         ))}
       </div>
+      {open && <AdDetailSheet ad={open} onClose={() => setOpen(null)} />}
+    </div>
+  );
+}
 
-      {open && (
-        <div className="absolute inset-0 z-[2000] bg-black/40 flex items-end" onClick={() => setOpen(null)}>
-          <div className="w-full bg-white rounded-t-3xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="h-28 flex items-center justify-center text-5xl relative" style={{ background: `${open.color}18` }}>
-              {open.emoji}
-              <button onClick={() => setOpen(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center"><X className="w-4 h-4 text-gray-600" /></button>
-              <span className="absolute top-3 left-3 text-[9px] font-bold text-white px-2 py-0.5 rounded-full" style={{ background: open.color }}>{open.category}</span>
-            </div>
-            <div className="p-4">
-              <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: open.color }}>{open.business}</div>
-              <h3 className="font-extrabold text-[#1C2B3A] text-lg leading-tight mt-0.5">{open.title}</h3>
-              <p className="text-sm text-gray-500 mt-2 leading-relaxed">{open.desc}</p>
-              <div className="text-[11px] text-gray-400 mt-2">Anunciante: {open.owner}</div>
-              <button className="w-full mt-4 py-3 rounded-xl text-white font-extrabold text-sm" style={{ background: open.color }}>{open.cta}</button>
-              <p className="text-center text-[10px] text-gray-400 mt-2">Contenido patrocinado · PoliBus no cobra al estudiante</p>
-            </div>
-          </div>
+// Subsección "Ofertas" — catálogo completo precargado (publicado por PoliBus)
+function OffersTab() {
+  const active = seedAds.filter(a => a.active);
+  const [open, setOpen] = useState<Ad | null>(null);
+  const [cat, setCat] = useState<string>("Todas");
+  const cats = ["Todas", ...Array.from(new Set(active.map(a => a.category)))];
+  const list = cat === "Todas" ? active : active.filter(a => a.category === cat);
+
+  return (
+    <div className="p-3 space-y-3">
+      <div className="bg-gradient-to-br from-[#B45309] to-[#7C2D12] rounded-2xl p-4 text-white relative overflow-hidden">
+        <div className="absolute -right-6 -top-8 w-32 h-32 rounded-full bg-white/10" />
+        <div className="relative">
+          <div className="flex items-center gap-2 mb-1"><Store className="w-5 h-5" /><span className="font-extrabold text-base">Ofertas politécnicas</span></div>
+          <p className="text-amber-100 text-xs leading-relaxed">Beneficios de negocios cerca del campus, seleccionados para ti. La app es gratis gracias a ellos.</p>
         </div>
-      )}
+      </div>
+
+      {/* Filtro por categoría */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3">
+        {cats.map(c => (
+          <button key={c} onClick={() => setCat(c)}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${cat === c ? "bg-[#B45309] text-white border-[#B45309]" : "bg-white text-gray-600 border-gray-200"}`}>
+            {c}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-2.5">
+        {list.map(ad => (
+          <button key={ad.id} onClick={() => setOpen(ad)}
+            className="w-full text-left bg-white rounded-2xl border border-gray-100 p-3 flex items-center gap-3 hover:shadow-md transition-shadow">
+            <div className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl shrink-0" style={{ background: `${ad.color}16` }}>{ad.emoji}</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: ad.color }}>{ad.business}</div>
+              <div className="font-extrabold text-[#1C2B3A] text-sm leading-tight">{ad.title}</div>
+              <div className="text-gray-400 text-xs truncate mt-0.5">{ad.desc}</div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+          </button>
+        ))}
+      </div>
+
+      <p className="text-center text-[10px] text-gray-400 pt-1">Anuncios gestionados por PoliBus · Contenido patrocinado</p>
+
+      {open && <AdDetailSheet ad={open} onClose={() => setOpen(null)} />}
     </div>
   );
 }
@@ -628,6 +681,7 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
   const navItems = [
     { t: "mapa" as StudentTab, icon: <MapPin className="w-5 h-5" />, label: "Mapa" },
     { t: "rutas" as StudentTab, icon: <Bus className="w-5 h-5" />, label: "Rutas" },
+    { t: "anuncios" as StudentTab, icon: <Store className="w-5 h-5" />, label: "Ofertas" },
     { t: "notificaciones" as StudentTab, icon: <Bell className="w-5 h-5" />, label: "Avisos" },
     { t: "cuenta" as StudentTab, icon: <Star className="w-5 h-5" />, label: "Cuenta" },
   ];
@@ -650,6 +704,7 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
                 <h2 className="text-white font-extrabold text-lg leading-tight">
                   {tab === "mapa" && "Rastreo en Vivo"}
                   {tab === "rutas" && "Mis Rutas"}
+                  {tab === "anuncios" && "Ofertas para ti"}
                   {tab === "notificaciones" && "Notificaciones"}
                   {tab === "cuenta" && "Mi Cuenta"}
                 </h2>
@@ -793,6 +848,8 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
               })}
             </div>
           )}
+
+          {tab === "anuncios" && <OffersTab />}
 
           {tab === "notificaciones" && (
             <div className="p-3 space-y-2.5">
@@ -1913,170 +1970,6 @@ function ConductorApp({ onLogout }: { onLogout: () => void }) {
   );
 }
 
-// ─── EMPRENDEDOR DASHBOARD ────────────────────────────────────
-
-function EmprendedorDashboard({ onLogout }: { onLogout: () => void }) {
-  const [campaigns, setCampaigns] = useState<Ad[]>(seedAds);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ business: "", title: "", desc: "", category: "Comida" as Ad["category"], cta: "Ver más" });
-
-  const toggle = (id: string) => setCampaigns(cs => cs.map(c => c.id === id ? { ...c, active: !c.active } : c));
-  const totalImpr = campaigns.reduce((s, c) => s + c.impressions, 0);
-  const totalClicks = campaigns.reduce((s, c) => s + c.clicks, 0);
-  const ctr = totalImpr > 0 ? (totalClicks / totalImpr * 100) : 0;
-  const activeCount = campaigns.filter(c => c.active).length;
-
-  const createCampaign = () => {
-    if (!form.business || !form.title) return;
-    setCampaigns(cs => [{
-      id: `AD${Date.now()}`, business: form.business, owner: "Tú", title: form.title, desc: form.desc,
-      category: form.category, color: adCategoryColor[form.category], emoji: "🏷️", cta: form.cta,
-      impressions: 0, clicks: 0, active: true,
-    }, ...cs]);
-    setForm({ business: "", title: "", desc: "", category: "Comida", cta: "Ver más" });
-    setShowForm(false);
-  };
-
-  const kpis = [
-    { label: "Impresiones", value: totalImpr.toLocaleString(), icon: <Eye className="w-4 h-4" />, color: "#B45309", bg: "#FEF3C7" },
-    { label: "Clics", value: totalClicks.toLocaleString(), icon: <MousePointerClick className="w-4 h-4" />, color: "#1D4ED8", bg: "#DBEAFE" },
-    { label: "CTR promedio", value: `${ctr.toFixed(1)}%`, icon: <TrendingUp className="w-4 h-4" />, color: "#059669", bg: "#D1FAE5" },
-    { label: "Campañas activas", value: String(activeCount), icon: <Megaphone className="w-4 h-4" />, color: "#7C3AED", bg: "#EDE9FE" },
-  ];
-
-  return (
-    <div className="flex h-screen bg-[#F0F4FA]" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
-      <aside className="w-56 bg-[#1C1206] flex flex-col shrink-0">
-        <div className="p-4 border-b border-white/[0.07]">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-[#B45309] rounded-lg flex items-center justify-center shrink-0"><Store className="w-4 h-4 text-white" /></div>
-            <div><div className="text-white font-extrabold text-sm tracking-tight">PoliBus</div><div className="text-amber-400/80 text-[9px]">Portal Emprendedor</div></div>
-          </div>
-        </div>
-        <nav className="flex-1 p-2.5 space-y-0.5">
-          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold bg-[#B45309] text-white"><Megaphone className="w-4 h-4" />Mis Campañas</div>
-        </nav>
-        <div className="p-2.5 border-t border-white/[0.07]">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-7 h-7 bg-[#B45309] rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0">EM</div>
-            <div className="min-w-0"><div className="text-white text-[10px] font-bold truncate">Negocio Politécnico</div><div className="text-amber-400/70 text-[9px]">Anunciante</div></div>
-          </div>
-          <button onClick={onLogout} className="w-full flex items-center gap-1.5 text-amber-200/80 hover:text-white text-[10px] py-1 transition-colors"><LogOut className="w-3 h-3" />Cerrar sesión</button>
-        </div>
-      </aside>
-
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-white border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
-          <div>
-            <h1 className="font-extrabold text-[#1C2B3A] text-base">Mis Campañas</h1>
-            <p className="text-muted-foreground text-xs">Llega a la comunidad politécnica en el momento de su traslado</p>
-          </div>
-          <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 text-xs text-white font-bold bg-[#B45309] hover:bg-[#92400E] rounded-lg px-3.5 py-2 transition-colors"><Plus className="w-4 h-4" />Crear anuncio</button>
-        </header>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <div className="grid grid-cols-4 gap-3">
-            {kpis.map(k => (
-              <div key={k.label} className="bg-white rounded-xl p-4 border border-border flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: k.bg, color: k.color }}>{k.icon}</div>
-                <div><div className="font-extrabold text-2xl text-[#1C2B3A]">{k.value}</div><div className="text-muted-foreground text-xs">{k.label}</div></div>
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-white rounded-xl border border-border overflow-hidden">
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-              <h2 className="font-extrabold text-[#1C2B3A] text-sm">Campañas</h2>
-              <span className="text-xs text-muted-foreground">{campaigns.length} en total</span>
-            </div>
-            <div className="p-4 grid grid-cols-2 gap-3">
-              {campaigns.map(c => {
-                const cctr = c.impressions > 0 ? (c.clicks / c.impressions * 100).toFixed(1) : "0.0";
-                return (
-                  <div key={c.id} className={`rounded-xl border p-3.5 transition-all ${c.active ? "border-gray-200 bg-white" : "border-gray-100 bg-[#F8FAFD] opacity-70"}`}>
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0" style={{ background: `${c.color}18` }}>{c.emoji}</div>
-                        <div className="min-w-0">
-                          <div className="font-extrabold text-[#1C2B3A] text-sm truncate">{c.title}</div>
-                          <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: c.color }}>{c.business}</div>
-                        </div>
-                      </div>
-                      <button onClick={() => toggle(c.id)} title={c.active ? "Pausar" : "Activar"}
-                        className={`w-11 h-6 rounded-full flex items-center px-0.5 shrink-0 transition-colors ${c.active ? "bg-emerald-500 justify-end" : "bg-gray-300 justify-start"}`}>
-                        <span className="w-5 h-5 bg-white rounded-full shadow" />
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-500 leading-relaxed mb-3 line-clamp-2">{c.desc}</p>
-                    <div className="grid grid-cols-3 gap-1.5 text-center">
-                      <div className="bg-[#F7F9FC] rounded-lg py-1.5"><div className="text-[9px] text-gray-400">Impr.</div><div className="text-xs font-extrabold text-[#1C2B3A]">{c.impressions.toLocaleString()}</div></div>
-                      <div className="bg-[#F7F9FC] rounded-lg py-1.5"><div className="text-[9px] text-gray-400">Clics</div><div className="text-xs font-extrabold text-[#1C2B3A]">{c.clicks.toLocaleString()}</div></div>
-                      <div className="bg-[#F7F9FC] rounded-lg py-1.5"><div className="text-[9px] text-gray-400">CTR</div><div className="text-xs font-extrabold text-[#1C2B3A]">{cctr}%</div></div>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${c.color}18`, color: c.color }}>{c.category}</span>
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${c.active ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>{c.active ? "Activa" : "Pausada"}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-            <Megaphone className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-sm text-amber-900">
-              <strong>Publicidad hipersegmentada.</strong> Tus anuncios se muestran a estudiantes durante su traslado, a tarifas accesibles para negocios politécnicos. Modelo B2C que sostiene la app gratuita para el estudiante.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Modal crear anuncio */}
-      {showForm && (
-        <div className="fixed inset-0 z-[3000] bg-black/40 flex items-center justify-center p-6" onClick={() => setShowForm(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-              <h3 className="font-extrabold text-[#1C2B3A]">Crear anuncio</h3>
-              <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="p-5 space-y-3">
-              <div>
-                <label className="text-xs font-bold text-[#1C2B3A] block mb-1.5">Nombre del negocio</label>
-                <input value={form.business} onChange={e => setForm({ ...form, business: e.target.value })} placeholder="p. ej. Cafetería Central" className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-[#F8FAFD] focus:outline-none focus:ring-2 focus:ring-[#B45309]/20" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-[#1C2B3A] block mb-1.5">Título de la oferta</label>
-                <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="p. ej. 2x1 en café" className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-[#F8FAFD] focus:outline-none focus:ring-2 focus:ring-[#B45309]/20" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-[#1C2B3A] block mb-1.5">Descripción</label>
-                <textarea rows={3} value={form.desc} onChange={e => setForm({ ...form, desc: e.target.value })} placeholder="Detalle de la promoción..." className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-[#F8FAFD] resize-none focus:outline-none focus:ring-2 focus:ring-[#B45309]/20" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-[#1C2B3A] block mb-1.5">Categoría</label>
-                  <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value as Ad["category"] })} className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-[#F8FAFD] focus:outline-none">
-                    {(Object.keys(adCategoryColor) as Ad["category"][]).map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-[#1C2B3A] block mb-1.5">Texto del botón</label>
-                  <input value={form.cta} onChange={e => setForm({ ...form, cta: e.target.value })} className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-[#F8FAFD] focus:outline-none focus:ring-2 focus:ring-[#B45309]/20" />
-                </div>
-              </div>
-            </div>
-            <div className="px-5 py-3 border-t border-border bg-[#F8FAFD] flex justify-end gap-2">
-              <button onClick={() => setShowForm(false)} className="px-4 py-2 text-xs font-bold text-gray-600 rounded-lg hover:bg-gray-100">Cancelar</button>
-              <button onClick={createCampaign} disabled={!form.business || !form.title} className="px-4 py-2 bg-[#B45309] text-white text-xs font-bold rounded-lg hover:bg-[#92400E] disabled:opacity-40 transition-colors">Publicar anuncio</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── MAIN APP ─────────────────────────────────────────────────
 
 export default function App() {
@@ -2085,6 +1978,5 @@ export default function App() {
   if (role === "student") return <StudentApp onLogout={() => setRole(null)} />;
   if (role === "conductor") return <ConductorApp onLogout={() => setRole(null)} />;
   if (role === "sedarey") return <SedareyDashboard onLogout={() => setRole(null)} />;
-  if (role === "emprendedor") return <EmprendedorDashboard onLogout={() => setRole(null)} />;
   return <EspolDashboard onLogout={() => setRole(null)} />;
 }
