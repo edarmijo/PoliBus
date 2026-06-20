@@ -7,7 +7,8 @@ import {
   DollarSign, MessageSquare, Download, LogOut,
   Activity, FileText, Shield, X, Send, RefreshCw,
   Eye, BarChart2, Zap, Navigation, Filter, Calendar,
-  Wrench, Tag, AlertCircle,
+  Wrench, Tag, AlertCircle, Store, Megaphone, Plus,
+  MousePointerClick, Gauge, Power, Satellite,
 } from "lucide-react";
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area,
@@ -25,6 +26,7 @@ import {
 } from "./data/mock";
 import { expandTimes, scheduleSummary, nextDeparture, fareLabel } from "./lib/schedule";
 import { postFeedback } from "./lib/api";
+import { ads as seedAds, adCategoryColor, type Ad } from "./data/ads";
 
 // Suppress Leaflet default icon path issues (we use DivIcon + CircleMarker only)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,7 +34,7 @@ delete (L.Icon.Default.prototype as any)._getIconUrl;
 
 // ─── TYPES ────────────────────────────────────────────────────
 
-type UserRole = "student" | "sedarey" | "espol";
+type UserRole = "student" | "sedarey" | "espol" | "conductor" | "emprendedor";
 type SedareyTab = "monitoreo" | "aforo" | "financiero" | "retroalimentacion" | "supervisor" | "mantenimiento";
 type EspolTab = "kpis" | "satisfaccion" | "reportes" | "alertas";
 type StudentTab = "mapa" | "rutas" | "notificaciones" | "cuenta";
@@ -494,26 +496,28 @@ function LoginScreen({ onSelectRole }: { onSelectRole: (r: UserRole) => void }) 
             Conecta. Monitorea.<br /><span style={{ color: "#005DAA" }}>Decide.</span>
           </h1>
           <p className="text-blue-200 text-lg max-w-2xl mx-auto leading-relaxed">
-            Plataforma integral de gestión del transporte universitario ESPOL. Tres portales especializados.
+            Ecosistema integral del transporte universitario ESPOL. Cinco actores, una sola plataforma basada en datos.
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-6 w-full max-w-4xl">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-5xl">
           {[
-            { role: "student" as UserRole, icon: <Navigation className="w-7 h-7" />, title: "Estudiante", sub: "App Móvil ESPOL", desc: "Ubica tu bus en tiempo real, consulta aforo y horarios, y califica el servicio desde tu celular.", color: "#005DAA", grad: "from-blue-900/50 to-blue-800/20", tag: "1,847 viajes hoy" },
-            { role: "sedarey" as UserRole, icon: <Activity className="w-7 h-7" />, title: "Cooperativa SEDAREY", sub: "Dashboard Operativo", desc: "Monitorea la flota completa, mantenimiento preventivo, reportes financieros y retroalimentación.", color: "#0891B2", grad: "from-cyan-900/50 to-cyan-800/20", tag: "7 buses activos" },
-            { role: "espol" as UserRole, icon: <Shield className="w-7 h-7" />, title: "Administración ESPOL", sub: "Dashboard Institucional", desc: "KPIs gerenciales, satisfacción estudiantil y reportes de desempeño histórico de SEDAREY.", color: "#7C3AED", grad: "from-purple-900/50 to-purple-800/20", tag: "Solo lectura" },
+            { role: "student" as UserRole, icon: <Navigation className="w-6 h-6" />, title: "Estudiante", sub: "App Móvil", desc: "Ubica tu bus en tiempo real, consulta aforo y horarios, y califica el servicio.", color: "#005DAA", grad: "from-blue-900/50 to-blue-800/20", tag: "1,847 viajes hoy" },
+            { role: "conductor" as UserRole, icon: <Bus className="w-6 h-6" />, title: "Conductor", sub: "App del Conductor", desc: "Tu ruta del día, aforo automático por sensores y GPS dedicado. Sin reportes manuales.", color: "#0E7490", grad: "from-teal-900/50 to-teal-800/20", tag: "Conteo automático" },
+            { role: "sedarey" as UserRole, icon: <Activity className="w-6 h-6" />, title: "Cooperativa SEDAREY", sub: "Dashboard Operativo", desc: "Flota, mantenimiento preventivo, kilometraje, finanzas y retroalimentación.", color: "#0891B2", grad: "from-cyan-900/50 to-cyan-800/20", tag: "7 buses activos" },
+            { role: "espol" as UserRole, icon: <Shield className="w-6 h-6" />, title: "Bienestar Politécnico", sub: "Auditoría Institucional", desc: "KPIs de cumplimiento contractual, satisfacción y desempeño histórico de SEDAREY.", color: "#7C3AED", grad: "from-purple-900/50 to-purple-800/20", tag: "Auditoría" },
+            { role: "emprendedor" as UserRole, icon: <Store className="w-6 h-6" />, title: "Emprendedor", sub: "Portal de Negocios", desc: "Publica ofertas a la comunidad politécnica en el momento exacto de su traslado.", color: "#B45309", grad: "from-amber-900/50 to-amber-800/20", tag: "Economía circular" },
           ].map(item => (
             <button key={item.role} onClick={() => onSelectRole(item.role)}
-              className={`group bg-gradient-to-br ${item.grad} border border-white/10 rounded-2xl p-6 text-left hover:border-white/25 hover:scale-[1.02] transition-all duration-200 cursor-pointer`}>
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-14 h-14 rounded-xl flex items-center justify-center text-white" style={{ background: item.color }}>{item.icon}</div>
+              className={`group bg-gradient-to-br ${item.grad} border border-white/10 rounded-2xl p-5 text-left hover:border-white/25 hover:scale-[1.02] transition-all duration-200 cursor-pointer`}>
+              <div className="flex items-start justify-between mb-3.5">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white" style={{ background: item.color }}>{item.icon}</div>
                 <span className="text-[10px] font-bold px-2 py-1 rounded-full border border-white/15 text-white/60">{item.tag}</span>
               </div>
-              <div className="text-white font-extrabold text-xl mb-0.5">{item.title}</div>
-              <div className="text-xs font-semibold mb-3" style={{ color: item.color }}>{item.sub}</div>
+              <div className="text-white font-extrabold text-lg mb-0.5">{item.title}</div>
+              <div className="text-xs font-semibold mb-2.5" style={{ color: item.color }}>{item.sub}</div>
               <p className="text-blue-200 text-sm leading-relaxed">{item.desc}</p>
-              <div className="mt-5 flex items-center gap-2 text-sm font-bold" style={{ color: item.color }}>
+              <div className="mt-4 flex items-center gap-2 text-sm font-bold" style={{ color: item.color }}>
                 Acceder<ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </div>
             </button>
@@ -522,6 +526,55 @@ function LoginScreen({ onSelectRole }: { onSelectRole: (r: UserRole) => void }) 
       </main>
 
       <footer className="text-center py-4 text-blue-400/50 text-xs">© 2026 PoliBus · ESPOL × SEDAREY · Guayaquil, Ecuador</footer>
+    </div>
+  );
+}
+
+// ─── PUBLICIDAD IN-APP (negocios politécnicos) ────────────────
+
+function PromoStrip() {
+  const active = seedAds.filter(a => a.active);
+  const [open, setOpen] = useState<Ad | null>(null);
+  if (!active.length) return null;
+  return (
+    <div className="pt-1">
+      <div className="flex items-center justify-between px-1 mb-2">
+        <h3 className="text-sm font-extrabold text-[#1C2B3A] flex items-center gap-1.5"><Store className="w-4 h-4 text-[#B45309]" />Ofertas cerca de ti</h3>
+        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide bg-gray-100 px-2 py-0.5 rounded-full">Patrocinado</span>
+      </div>
+      <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-3 px-3">
+        {active.map(ad => (
+          <button key={ad.id} onClick={() => setOpen(ad)}
+            className="shrink-0 w-[210px] text-left bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+            <div className="h-16 flex items-center justify-center text-3xl" style={{ background: `${ad.color}14` }}>{ad.emoji}</div>
+            <div className="p-3">
+              <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: ad.color }}>{ad.business}</div>
+              <div className="font-extrabold text-[#1C2B3A] text-sm leading-tight">{ad.title}</div>
+              <div className="mt-2 inline-flex items-center gap-1 text-xs font-bold" style={{ color: ad.color }}>{ad.cta}<ChevronRight className="w-3.5 h-3.5" /></div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {open && (
+        <div className="absolute inset-0 z-[2000] bg-black/40 flex items-end" onClick={() => setOpen(null)}>
+          <div className="w-full bg-white rounded-t-3xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="h-28 flex items-center justify-center text-5xl relative" style={{ background: `${open.color}18` }}>
+              {open.emoji}
+              <button onClick={() => setOpen(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center"><X className="w-4 h-4 text-gray-600" /></button>
+              <span className="absolute top-3 left-3 text-[9px] font-bold text-white px-2 py-0.5 rounded-full" style={{ background: open.color }}>{open.category}</span>
+            </div>
+            <div className="p-4">
+              <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: open.color }}>{open.business}</div>
+              <h3 className="font-extrabold text-[#1C2B3A] text-lg leading-tight mt-0.5">{open.title}</h3>
+              <p className="text-sm text-gray-500 mt-2 leading-relaxed">{open.desc}</p>
+              <div className="text-[11px] text-gray-400 mt-2">Anunciante: {open.owner}</div>
+              <button className="w-full mt-4 py-3 rounded-xl text-white font-extrabold text-sm" style={{ background: open.color }}>{open.cta}</button>
+              <p className="text-center text-[10px] text-gray-400 mt-2">Contenido patrocinado · PoliBus no cobra al estudiante</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -697,6 +750,9 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
                   );
                 })}
               </div>
+
+              {/* Publicidad de negocios politécnicos durante el traslado */}
+              <PromoStrip />
             </div>
           )}
 
@@ -910,7 +966,7 @@ function SedareyDashboard({ onLogout }: { onLogout: () => void }) {
         <header className="bg-white border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
           <div>
             <h1 className="font-extrabold text-[#1C2B3A] text-base">{navItems.find(n => n.t === tab)?.label}</h1>
-            <p className="text-muted-foreground text-xs">Jueves 5 jun 2026 · Flota SEDAREY · Guayaquil</p>
+            <p className="text-muted-foreground text-xs flex items-center gap-1.5">Jueves 5 jun 2026 · Flota SEDAREY <span className="inline-flex items-center gap-1 text-[#0E7490]"><Satellite className="w-3 h-3" />GPS dedicado + sensores IR</span></p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1 text-xs font-bold text-emerald-700">
@@ -1346,7 +1402,7 @@ function EspolDashboard({ onLogout }: { onLogout: () => void }) {
         <div className="p-4 border-b border-white/[0.07]">
           <div className="flex items-center gap-2.5 mb-2">
             <div className="w-8 h-8 bg-[#7C3AED] rounded-lg flex items-center justify-center shrink-0"><Shield className="w-4 h-4 text-white" /></div>
-            <div><div className="text-white font-extrabold text-sm tracking-tight">PoliBus</div><div className="text-purple-400 text-[9px]">ESPOL — Administración</div></div>
+            <div><div className="text-white font-extrabold text-sm tracking-tight">PoliBus</div><div className="text-purple-400 text-[9px]">Bienestar Politécnico</div></div>
           </div>
           <div className="flex items-center gap-1.5 bg-purple-900/30 border border-purple-700/25 rounded-lg px-2 py-1 mt-1">
             <Eye className="w-3 h-3 text-purple-400" /><span className="text-purple-300 text-[9px] font-bold">Solo Lectura</span>
@@ -1363,7 +1419,7 @@ function EspolDashboard({ onLogout }: { onLogout: () => void }) {
         <div className="p-2.5 border-t border-white/[0.07]">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-7 h-7 bg-[#7C3AED] rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0">ES</div>
-            <div className="min-w-0"><div className="text-white text-[10px] font-bold truncate">Admin. ESPOL</div><div className="text-blue-400 text-[9px]">Vicerrectorado</div></div>
+            <div className="min-w-0"><div className="text-white text-[10px] font-bold truncate">Bienestar Politécnico</div><div className="text-blue-400 text-[9px]">Dirección de Bienestar Estudiantil</div></div>
           </div>
           <button onClick={onLogout} className="w-full flex items-center gap-1.5 text-blue-300 hover:text-white text-[10px] py-1 transition-colors"><LogOut className="w-3 h-3" />Cerrar sesión</button>
         </div>
@@ -1373,7 +1429,7 @@ function EspolDashboard({ onLogout }: { onLogout: () => void }) {
         <header className="bg-white border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
           <div>
             <h1 className="font-extrabold text-[#1C2B3A] text-base">{navItems.find(n => n.t === tab)?.label}</h1>
-            <p className="text-muted-foreground text-xs">Administración institucional ESPOL · PoliBus DSS</p>
+            <p className="text-muted-foreground text-xs flex items-center gap-1.5">Bienestar Politécnico · Auditoría independiente <span className="inline-flex items-center gap-1 text-[#7C3AED]"><Satellite className="w-3 h-3" />Telemetría GPS + sensores IR</span></p>
           </div>
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-full px-3 py-1 text-xs font-bold text-purple-700"><Eye className="w-3 h-3" />Solo lectura</span>
@@ -1753,12 +1809,282 @@ function EspolDashboard({ onLogout }: { onLogout: () => void }) {
   );
 }
 
+// ─── CONDUCTOR APP (Carlos) ───────────────────────────────────
+
+function ConductorApp({ onLogout }: { onLogout: () => void }) {
+  const myBus = buses.find(b => b.id === "B001") ?? buses[0];
+  const route = getRoute(myBus.routeId);
+  const [onDuty, setOnDuty] = useState(true);
+  const times = route ? expandTimes(route.schedule) : [];
+  const next = route ? nextDeparture(route.schedule) : null;
+  // Índice de la salida "actual" para marcar hechas/pendientes (demo).
+  const doneCount = next ? Math.max(0, times.indexOf(next.time)) : times.length;
+  const pct = Math.round(myBus.passengers / myBus.capacity * 100);
+
+  return (
+    <div className="min-h-screen bg-[#0D1B2E] flex items-start justify-center py-6 px-4" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+      <div className="relative w-[390px] h-[844px] bg-[#F0F4FA] rounded-[44px] shadow-[0_30px_80px_rgba(0,0,0,0.65)] overflow-hidden border-[3px] border-[#182435] flex flex-col">
+        <div className="bg-gradient-to-br from-[#0E7490] to-[#0B4F63] px-6 pt-3 pb-1 flex justify-between items-center text-white text-[11px] shrink-0">
+          <span className="font-mono font-medium">9:41</span>
+          <span className="text-[10px] tracking-tight">▲▲▲ ▮</span>
+        </div>
+        <div className="bg-gradient-to-br from-[#0E7490] to-[#0B4F63] px-5 pb-5 pt-1 shrink-0 relative overflow-hidden">
+          <div className="absolute -right-8 -top-10 w-40 h-40 rounded-full bg-white/5" />
+          <div className="flex items-center justify-between relative">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center text-white font-extrabold border border-white/20">CP</div>
+              <div>
+                <p className="text-teal-100 text-xs font-medium">Conductor</p>
+                <h2 className="text-white font-extrabold text-lg leading-tight">{myBus.driver}</h2>
+              </div>
+            </div>
+            <button onClick={onLogout} className="w-10 h-10 bg-white/15 hover:bg-white/25 transition-colors rounded-2xl flex items-center justify-center border border-white/20"><LogOut className="w-4 h-4 text-white" /></button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          {/* Estado del turno */}
+          <div className="bg-white rounded-2xl p-4 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-gray-400 font-semibold">Estado del turno</div>
+                <div className={`text-xl font-extrabold ${onDuty ? "text-emerald-600" : "text-gray-400"}`}>{onDuty ? "En Ruta" : "En Descanso"}</div>
+              </div>
+              <button onClick={() => setOnDuty(v => !v)}
+                className={`w-16 h-9 rounded-full flex items-center px-1 transition-colors ${onDuty ? "bg-emerald-500 justify-end" : "bg-gray-300 justify-start"}`}>
+                <span className="w-7 h-7 bg-white rounded-full flex items-center justify-center shadow"><Power className={`w-3.5 h-3.5 ${onDuty ? "text-emerald-600" : "text-gray-400"}`} /></span>
+              </button>
+            </div>
+          </div>
+
+          {/* Unidad y ruta */}
+          <div className="rounded-2xl p-4 text-white" style={{ background: route?.color ?? "#0E7490" }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5"><Bus className="w-6 h-6" /><div><div className="font-extrabold text-base">{myBus.id} · {route?.shortName}</div><div className="text-white/80 text-xs font-mono">{myBus.plate}</div></div></div>
+              <div className="text-right"><div className="text-white/80 text-[10px]">Próxima salida</div><div className="font-extrabold text-lg">{next ? next.time : "—"}</div></div>
+            </div>
+          </div>
+
+          {/* Aforo automático por sensores */}
+          <div className="bg-white rounded-2xl p-4 border border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-extrabold text-[#1C2B3A] text-sm flex items-center gap-1.5"><Gauge className="w-4 h-4 text-[#0E7490]" />Aforo automático</h3>
+              <OccupancyBadge level={myBus.occupancy} />
+            </div>
+            <div className="flex items-end gap-1 mb-2">
+              <span className="text-4xl font-extrabold text-[#1C2B3A] leading-none">{myBus.passengers}</span>
+              <span className="text-sm font-bold text-gray-400 mb-0.5">/ {myBus.capacity} pasajeros</span>
+            </div>
+            <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden mb-2"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: ocColors[myBus.occupancy] }} /></div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-emerald-50 rounded-lg py-2 text-center"><div className="text-[10px] text-emerald-600 font-semibold">Subidas hoy</div><div className="font-extrabold text-emerald-700">+128</div></div>
+              <div className="bg-blue-50 rounded-lg py-2 text-center"><div className="text-[10px] text-blue-600 font-semibold">Bajadas hoy</div><div className="font-extrabold text-blue-700">−116</div></div>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-2.5 flex items-center gap-1"><Satellite className="w-3 h-3" />Conteo por sensores infrarrojos · sin registro manual</p>
+          </div>
+
+          {/* Recorrido de hoy */}
+          <div className="bg-white rounded-2xl p-4 border border-gray-100">
+            <h3 className="font-extrabold text-[#1C2B3A] text-sm mb-3">Salidas de hoy</h3>
+            <div className="space-y-2">
+              {times.map((t, i) => {
+                const state = i < doneCount ? "done" : i === doneCount ? "now" : "next";
+                return (
+                  <div key={t} className="flex items-center gap-3">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${state === "done" ? "bg-emerald-100" : state === "now" ? "bg-teal-100" : "bg-gray-100"}`}>
+                      {state === "done" ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : state === "now" ? <Navigation className="w-3.5 h-3.5 text-teal-600" /> : <Clock className="w-3.5 h-3.5 text-gray-400" />}
+                    </div>
+                    <span className={`text-sm font-bold ${state === "next" ? "text-gray-400" : "text-[#1C2B3A]"}`}>{t}</span>
+                    {state === "now" && <span className="ml-auto text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full">En curso</span>}
+                    {state === "done" && <span className="ml-auto text-[10px] text-gray-400">Completada</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-teal-50 border border-teal-100 rounded-2xl p-3 flex items-center gap-2.5">
+            <Satellite className="w-5 h-5 text-teal-600 shrink-0" />
+            <p className="text-xs text-teal-800 font-semibold">GPS dedicado activo. Tu posición y aforo se reportan solos: enfócate en conducir.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── EMPRENDEDOR DASHBOARD ────────────────────────────────────
+
+function EmprendedorDashboard({ onLogout }: { onLogout: () => void }) {
+  const [campaigns, setCampaigns] = useState<Ad[]>(seedAds);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ business: "", title: "", desc: "", category: "Comida" as Ad["category"], cta: "Ver más" });
+
+  const toggle = (id: string) => setCampaigns(cs => cs.map(c => c.id === id ? { ...c, active: !c.active } : c));
+  const totalImpr = campaigns.reduce((s, c) => s + c.impressions, 0);
+  const totalClicks = campaigns.reduce((s, c) => s + c.clicks, 0);
+  const ctr = totalImpr > 0 ? (totalClicks / totalImpr * 100) : 0;
+  const activeCount = campaigns.filter(c => c.active).length;
+
+  const createCampaign = () => {
+    if (!form.business || !form.title) return;
+    setCampaigns(cs => [{
+      id: `AD${Date.now()}`, business: form.business, owner: "Tú", title: form.title, desc: form.desc,
+      category: form.category, color: adCategoryColor[form.category], emoji: "🏷️", cta: form.cta,
+      impressions: 0, clicks: 0, active: true,
+    }, ...cs]);
+    setForm({ business: "", title: "", desc: "", category: "Comida", cta: "Ver más" });
+    setShowForm(false);
+  };
+
+  const kpis = [
+    { label: "Impresiones", value: totalImpr.toLocaleString(), icon: <Eye className="w-4 h-4" />, color: "#B45309", bg: "#FEF3C7" },
+    { label: "Clics", value: totalClicks.toLocaleString(), icon: <MousePointerClick className="w-4 h-4" />, color: "#1D4ED8", bg: "#DBEAFE" },
+    { label: "CTR promedio", value: `${ctr.toFixed(1)}%`, icon: <TrendingUp className="w-4 h-4" />, color: "#059669", bg: "#D1FAE5" },
+    { label: "Campañas activas", value: String(activeCount), icon: <Megaphone className="w-4 h-4" />, color: "#7C3AED", bg: "#EDE9FE" },
+  ];
+
+  return (
+    <div className="flex h-screen bg-[#F0F4FA]" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+      <aside className="w-56 bg-[#1C1206] flex flex-col shrink-0">
+        <div className="p-4 border-b border-white/[0.07]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-[#B45309] rounded-lg flex items-center justify-center shrink-0"><Store className="w-4 h-4 text-white" /></div>
+            <div><div className="text-white font-extrabold text-sm tracking-tight">PoliBus</div><div className="text-amber-400/80 text-[9px]">Portal Emprendedor</div></div>
+          </div>
+        </div>
+        <nav className="flex-1 p-2.5 space-y-0.5">
+          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold bg-[#B45309] text-white"><Megaphone className="w-4 h-4" />Mis Campañas</div>
+        </nav>
+        <div className="p-2.5 border-t border-white/[0.07]">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-[#B45309] rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0">EM</div>
+            <div className="min-w-0"><div className="text-white text-[10px] font-bold truncate">Negocio Politécnico</div><div className="text-amber-400/70 text-[9px]">Anunciante</div></div>
+          </div>
+          <button onClick={onLogout} className="w-full flex items-center gap-1.5 text-amber-200/80 hover:text-white text-[10px] py-1 transition-colors"><LogOut className="w-3 h-3" />Cerrar sesión</button>
+        </div>
+      </aside>
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="bg-white border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
+          <div>
+            <h1 className="font-extrabold text-[#1C2B3A] text-base">Mis Campañas</h1>
+            <p className="text-muted-foreground text-xs">Llega a la comunidad politécnica en el momento de su traslado</p>
+          </div>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 text-xs text-white font-bold bg-[#B45309] hover:bg-[#92400E] rounded-lg px-3.5 py-2 transition-colors"><Plus className="w-4 h-4" />Crear anuncio</button>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="grid grid-cols-4 gap-3">
+            {kpis.map(k => (
+              <div key={k.label} className="bg-white rounded-xl p-4 border border-border flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: k.bg, color: k.color }}>{k.icon}</div>
+                <div><div className="font-extrabold text-2xl text-[#1C2B3A]">{k.value}</div><div className="text-muted-foreground text-xs">{k.label}</div></div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-xl border border-border overflow-hidden">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <h2 className="font-extrabold text-[#1C2B3A] text-sm">Campañas</h2>
+              <span className="text-xs text-muted-foreground">{campaigns.length} en total</span>
+            </div>
+            <div className="p-4 grid grid-cols-2 gap-3">
+              {campaigns.map(c => {
+                const cctr = c.impressions > 0 ? (c.clicks / c.impressions * 100).toFixed(1) : "0.0";
+                return (
+                  <div key={c.id} className={`rounded-xl border p-3.5 transition-all ${c.active ? "border-gray-200 bg-white" : "border-gray-100 bg-[#F8FAFD] opacity-70"}`}>
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0" style={{ background: `${c.color}18` }}>{c.emoji}</div>
+                        <div className="min-w-0">
+                          <div className="font-extrabold text-[#1C2B3A] text-sm truncate">{c.title}</div>
+                          <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: c.color }}>{c.business}</div>
+                        </div>
+                      </div>
+                      <button onClick={() => toggle(c.id)} title={c.active ? "Pausar" : "Activar"}
+                        className={`w-11 h-6 rounded-full flex items-center px-0.5 shrink-0 transition-colors ${c.active ? "bg-emerald-500 justify-end" : "bg-gray-300 justify-start"}`}>
+                        <span className="w-5 h-5 bg-white rounded-full shadow" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 leading-relaxed mb-3 line-clamp-2">{c.desc}</p>
+                    <div className="grid grid-cols-3 gap-1.5 text-center">
+                      <div className="bg-[#F7F9FC] rounded-lg py-1.5"><div className="text-[9px] text-gray-400">Impr.</div><div className="text-xs font-extrabold text-[#1C2B3A]">{c.impressions.toLocaleString()}</div></div>
+                      <div className="bg-[#F7F9FC] rounded-lg py-1.5"><div className="text-[9px] text-gray-400">Clics</div><div className="text-xs font-extrabold text-[#1C2B3A]">{c.clicks.toLocaleString()}</div></div>
+                      <div className="bg-[#F7F9FC] rounded-lg py-1.5"><div className="text-[9px] text-gray-400">CTR</div><div className="text-xs font-extrabold text-[#1C2B3A]">{cctr}%</div></div>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${c.color}18`, color: c.color }}>{c.category}</span>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${c.active ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>{c.active ? "Activa" : "Pausada"}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+            <Megaphone className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-900">
+              <strong>Publicidad hipersegmentada.</strong> Tus anuncios se muestran a estudiantes durante su traslado, a tarifas accesibles para negocios politécnicos. Modelo B2C que sostiene la app gratuita para el estudiante.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal crear anuncio */}
+      {showForm && (
+        <div className="fixed inset-0 z-[3000] bg-black/40 flex items-center justify-center p-6" onClick={() => setShowForm(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+              <h3 className="font-extrabold text-[#1C2B3A]">Crear anuncio</h3>
+              <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="text-xs font-bold text-[#1C2B3A] block mb-1.5">Nombre del negocio</label>
+                <input value={form.business} onChange={e => setForm({ ...form, business: e.target.value })} placeholder="p. ej. Cafetería Central" className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-[#F8FAFD] focus:outline-none focus:ring-2 focus:ring-[#B45309]/20" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-[#1C2B3A] block mb-1.5">Título de la oferta</label>
+                <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="p. ej. 2x1 en café" className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-[#F8FAFD] focus:outline-none focus:ring-2 focus:ring-[#B45309]/20" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-[#1C2B3A] block mb-1.5">Descripción</label>
+                <textarea rows={3} value={form.desc} onChange={e => setForm({ ...form, desc: e.target.value })} placeholder="Detalle de la promoción..." className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-[#F8FAFD] resize-none focus:outline-none focus:ring-2 focus:ring-[#B45309]/20" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-[#1C2B3A] block mb-1.5">Categoría</label>
+                  <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value as Ad["category"] })} className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-[#F8FAFD] focus:outline-none">
+                    {(Object.keys(adCategoryColor) as Ad["category"][]).map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-[#1C2B3A] block mb-1.5">Texto del botón</label>
+                  <input value={form.cta} onChange={e => setForm({ ...form, cta: e.target.value })} className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-[#F8FAFD] focus:outline-none focus:ring-2 focus:ring-[#B45309]/20" />
+                </div>
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-border bg-[#F8FAFD] flex justify-end gap-2">
+              <button onClick={() => setShowForm(false)} className="px-4 py-2 text-xs font-bold text-gray-600 rounded-lg hover:bg-gray-100">Cancelar</button>
+              <button onClick={createCampaign} disabled={!form.business || !form.title} className="px-4 py-2 bg-[#B45309] text-white text-xs font-bold rounded-lg hover:bg-[#92400E] disabled:opacity-40 transition-colors">Publicar anuncio</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── MAIN APP ─────────────────────────────────────────────────
 
 export default function App() {
   const [role, setRole] = useState<UserRole | null>(null);
   if (!role) return <LoginScreen onSelectRole={setRole} />;
   if (role === "student") return <StudentApp onLogout={() => setRole(null)} />;
+  if (role === "conductor") return <ConductorApp onLogout={() => setRole(null)} />;
   if (role === "sedarey") return <SedareyDashboard onLogout={() => setRole(null)} />;
+  if (role === "emprendedor") return <EmprendedorDashboard onLogout={() => setRole(null)} />;
   return <EspolDashboard onLogout={() => setRole(null)} />;
 }
