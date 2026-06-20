@@ -309,10 +309,10 @@ function DateRangeFilter({ from, to, onApply }: { from: string; to: string; onAp
   );
 }
 
-function PunctualityCard({ value, target, scope, subtitle }: { value: number; target: number; scope: string; subtitle?: string }) {
+function PunctualityCard({ value, target, scope, subtitle, onClick }: { value: number; target: number; scope: string; subtitle?: string; onClick?: () => void }) {
   const c = getPunctColor(value, target);
   return (
-    <div className={`bg-white rounded-xl p-5 border-2 ${c.border} flex flex-col justify-between`}>
+    <div onClick={onClick} className={`bg-white rounded-xl p-5 border-2 ${c.border} flex flex-col justify-between ${onClick ? "cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all" : ""}`}>
       <div className="flex items-start justify-between mb-3">
         <div><div className="text-xs text-muted-foreground font-semibold">Tasa de Puntualidad</div><div className="text-[10px] text-gray-400 mt-0.5">{scope}</div></div>
         <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${c.text} bg-gray-50 border`} style={{ borderColor: c.bg }}>{c.label}</span>
@@ -517,6 +517,23 @@ function LoginScreen({ onSelectRole }: { onSelectRole: (r: UserRole) => void }) 
 
 // ─── STUDENT APP ──────────────────────────────────────────────
 
+type NotifKind = "eta" | "delay" | "full" | "feedback";
+interface Notif { id: string; kind: NotifKind; msg: string; time: string; read: boolean; }
+
+const NOTIF_STYLE: Record<NotifKind, { icon: React.ReactNode; bg: string; ring: string }> = {
+  eta:      { icon: <Clock className="w-4 h-4 text-blue-600" />,        bg: "bg-blue-50",    ring: "#005DAA" },
+  delay:    { icon: <AlertTriangle className="w-4 h-4 text-amber-600" />, bg: "bg-amber-50",  ring: "#D97706" },
+  full:     { icon: <Users className="w-4 h-4 text-red-600" />,          bg: "bg-red-50",    ring: "#DC2626" },
+  feedback: { icon: <CheckCircle className="w-4 h-4 text-emerald-600" />, bg: "bg-emerald-50", ring: "#059669" },
+};
+
+const INITIAL_NOTIFS: Notif[] = [
+  { id: "N1", kind: "eta", msg: "Bus B001 llega en 8 minutos a Campus ESPOL. ¡Prepárate!", time: "hace 2 min", read: false },
+  { id: "N2", kind: "delay", msg: "Retraso en ruta Durán: aprox. 25 min por tráfico en el Puente Unidad Nacional.", time: "hace 15 min", read: false },
+  { id: "N3", kind: "full", msg: "Bus B003 (Albán Borja) está LLENO. Próxima salida 10:15.", time: "hace 32 min", read: true },
+  { id: "N4", kind: "feedback", msg: "Tu feedback para la ruta Interna fue revisado. ¡Gracias!", time: "hace 1h", read: true },
+];
+
 function StudentApp({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<StudentTab>("mapa");
   const [selRoute, setSelRoute] = useState(0);
@@ -528,6 +545,11 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
   const [showBanner, setShowBanner] = useState(true);
   const [routesDir, setRoutesDir] = useState<"ingreso" | "salida">("ingreso");
   const [previewRoute, setPreviewRoute] = useState<EspolRoute | null>(null);
+  const [notifs, setNotifs] = useState<Notif[]>(INITIAL_NOTIFS);
+
+  const unreadCount = notifs.filter(n => !n.read).length;
+  const markAllRead = () => setNotifs(ns => ns.map(n => ({ ...n, read: true })));
+  const toggleRead = (id: string) => setNotifs(ns => ns.map(n => n.id === id ? { ...n, read: !n.read } : n));
 
   const visibleBuses = (selRoute > 0 ? buses.filter(b => b.routeId === selRoute) : buses).filter(b => b.status !== "fuera_de_servicio");
   const routesByDir = routes.filter(r => r.direction === routesDir);
@@ -549,25 +571,31 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="min-h-screen bg-[#0D1B2E] flex items-start justify-center py-6 px-4" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
       <div className="relative w-[390px] h-[844px] bg-[#F0F4FA] rounded-[44px] shadow-[0_30px_80px_rgba(0,0,0,0.65)] overflow-hidden border-[3px] border-[#182435] flex flex-col">
-        <div className="bg-[#005DAA] px-6 pt-3 pb-1 flex justify-between items-center text-white text-[11px] shrink-0">
+        <div className="bg-gradient-to-br from-[#0A74D1] to-[#004A8F] px-6 pt-3 pb-1 flex justify-between items-center text-white text-[11px] shrink-0">
           <span className="font-mono font-medium">9:41</span>
-          <span className="font-extrabold tracking-widest text-sm">PoliBus</span>
           <span className="text-[10px] tracking-tight">▲▲▲ ▮</span>
         </div>
-        <div className="bg-[#005DAA] px-5 pb-4 shrink-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-200 text-xs font-medium">Buenos días, Estudiante ESPOL</p>
-              <h2 className="text-white font-extrabold text-lg leading-tight">
-                {tab === "mapa" && "Rastreo en Vivo"}
-                {tab === "rutas" && "Mis Rutas"}
-                {tab === "notificaciones" && "Notificaciones"}
-                {tab === "cuenta" && "Mi Cuenta"}
-              </h2>
+        <div className="bg-gradient-to-br from-[#0A74D1] to-[#004A8F] px-5 pb-5 pt-1 shrink-0 relative overflow-hidden">
+          <div className="absolute -right-8 -top-10 w-40 h-40 rounded-full bg-white/5" />
+          <div className="absolute -left-10 bottom-0 w-28 h-28 rounded-full bg-white/5" />
+          <div className="flex items-center justify-between relative">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center text-white font-extrabold shrink-0 border border-white/20">AS</div>
+              <div>
+                <p className="text-blue-100 text-xs font-medium">Hola, Andrea 👋</p>
+                <h2 className="text-white font-extrabold text-lg leading-tight">
+                  {tab === "mapa" && "Rastreo en Vivo"}
+                  {tab === "rutas" && "Mis Rutas"}
+                  {tab === "notificaciones" && "Notificaciones"}
+                  {tab === "cuenta" && "Mi Cuenta"}
+                </h2>
+              </div>
             </div>
-            <button className="w-9 h-9 bg-white/15 rounded-full flex items-center justify-center relative">
+            <button onClick={() => setTab("notificaciones")} className="w-10 h-10 bg-white/15 hover:bg-white/25 transition-colors rounded-2xl flex items-center justify-center relative border border-white/20">
               <Bell className="w-4 h-4 text-white" />
-              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border border-[#005DAA] text-white text-[7px] font-bold flex items-center justify-center">2</span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full border-2 border-[#0A5BA8] text-white text-[9px] font-bold flex items-center justify-center">{unreadCount}</span>
+              )}
             </button>
           </div>
         </div>
@@ -583,41 +611,77 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
         <div className="flex-1 overflow-y-auto">
           {tab === "mapa" && (
             <div className="p-3 space-y-3">
-              <div className="flex gap-2 overflow-x-auto pb-0.5">
-                {[{ id: 0, shortName: "Todas", color: "#005DAA" }, ...routes.filter(r => buses.some(b => b.routeId === r.id))].map(r => (
-                  <button key={r.id} onClick={() => setSelRoute(r.id)} className="shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all border"
-                    style={selRoute === r.id ? { background: r.color, color: "white", borderColor: r.color } : { background: "white", color: "#4B5563", borderColor: "#E4EAF2" }}>
-                    {r.shortName}
-                  </button>
-                ))}
+              {/* Filtro por ruta — sección clara y separada */}
+              <div className="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm">
+                <div className="flex items-center gap-1.5 mb-2.5">
+                  <Filter className="w-3.5 h-3.5 text-[#005DAA]" />
+                  <span className="text-[11px] font-extrabold text-[#1C2B3A] uppercase tracking-wide">Filtrar por ruta</span>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1 -mx-0.5 px-0.5">
+                  {[{ id: 0, shortName: "Todas", color: "#005DAA" }, ...routes.filter(r => buses.some(b => b.routeId === r.id))].map(r => {
+                    const active = selRoute === r.id;
+                    return (
+                      <button key={r.id} onClick={() => setSelRoute(r.id)}
+                        className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${active ? "shadow-sm" : ""}`}
+                        style={active ? { background: r.color, color: "white", borderColor: r.color } : { background: "#F4F7FB", color: "#4B5563", borderColor: "transparent" }}>
+                        <span className="w-2 h-2 rounded-full" style={{ background: active ? "white" : r.color }} />
+                        {r.shortName}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <BusMap height={200} selectedRoute={selRoute} />
+
+              <BusMap height={210} selectedRoute={selRoute} />
+
+              {/* Buses en vivo */}
+              <div className="flex items-center justify-between px-1 pt-0.5">
+                <h3 className="text-sm font-extrabold text-[#1C2B3A]">Buses en vivo</h3>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />{visibleBuses.length} activos
+                </span>
+              </div>
+
               <div className="space-y-2">
                 {visibleBuses.map(bus => {
                   const r = getRoute(bus.routeId);
                   const isOpen = openBus === bus.id;
                   return (
                     <button key={bus.id} onClick={() => setOpenBus(isOpen ? null : bus.id)}
-                      className="w-full bg-white rounded-2xl p-3.5 border border-gray-100 text-left hover:shadow-md transition-shadow">
+                      className={`w-full bg-white rounded-2xl p-3.5 border text-left transition-all ${isOpen ? "shadow-md" : "border-gray-100 hover:shadow-sm"}`}
+                      style={isOpen ? { borderColor: r?.color ?? "#005DAA" } : undefined}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: r?.color ?? "#005DAA" }}><Bus className="w-4 h-4 text-white" /></div>
-                          <div><div className="font-bold text-[#1C2B3A] text-sm">{bus.route}</div><div className="text-gray-400 text-xs font-mono">{bus.plate}</div></div>
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm" style={{ background: r?.color ?? "#005DAA" }}><Bus className="w-5 h-5 text-white" /></div>
+                          <div>
+                            <div className="font-bold text-[#1C2B3A] text-sm flex items-center gap-1.5">{bus.route}<span className="text-[9px] font-semibold text-gray-400">{r?.direction === "salida" ? "↑ Salida" : "↓ Ingreso"}</span></div>
+                            <div className="text-gray-400 text-xs font-mono">{bus.id} · {bus.plate}</div>
+                          </div>
                         </div>
                         <OccupancyBadge level={bus.occupancy} />
                       </div>
-                      <div className="mt-2.5 flex gap-3 text-xs text-gray-500">
-                        <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" style={{ color: r?.color }} /><strong className="text-[#1C2B3A]">{bus.eta} min</strong></span>
-                        <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" style={{ color: r?.color }} />{bus.passengers}/{bus.capacity}</span>
-                        <span className="flex items-center gap-1"><Navigation className="w-3.5 h-3.5" style={{ color: r?.color }} />{bus.speed} km/h</span>
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <div className="bg-[#F7F9FC] rounded-lg py-1.5 text-center">
+                          <div className="text-[9px] text-gray-400">Llega en</div>
+                          <div className="text-sm font-extrabold text-[#1C2B3A]">{bus.eta}<span className="text-[10px] font-bold"> min</span></div>
+                        </div>
+                        <div className="bg-[#F7F9FC] rounded-lg py-1.5 text-center">
+                          <div className="text-[9px] text-gray-400">Ocupación</div>
+                          <div className="text-sm font-extrabold text-[#1C2B3A]">{bus.passengers}<span className="text-[10px] font-bold">/{bus.capacity}</span></div>
+                        </div>
+                        <div className="bg-[#F7F9FC] rounded-lg py-1.5 text-center">
+                          <div className="text-[9px] text-gray-400">Velocidad</div>
+                          <div className="text-sm font-extrabold text-[#1C2B3A]">{bus.speed}<span className="text-[10px] font-bold"> km/h</span></div>
+                        </div>
                       </div>
                       {isOpen && (
-                        <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500 space-y-1">
-                          <div>Conductor: <strong className="text-gray-700">{bus.driver}</strong></div>
-                          <div>Tarifa: <strong className="text-gray-700">{r ? fareLabel(r.fare) : "—"}</strong></div>
-                          <div>Horario: <strong className="text-gray-700">{r ? scheduleSummary(r.schedule) : "—"}</strong></div>
+                        <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500 space-y-1.5">
+                          <div className="flex justify-between"><span>Conductor</span><strong className="text-gray-700">{bus.driver}</strong></div>
+                          <div className="flex justify-between"><span>Tarifa</span><strong className="text-gray-700">{r ? fareLabel(r.fare) : "—"}</strong></div>
+                          <div className="flex justify-between gap-3"><span className="shrink-0">Horario</span><strong className="text-gray-700 text-right">{r ? scheduleSummary(r.schedule) : "—"}</strong></div>
                         </div>
                       )}
+                      <div className="mt-2 flex items-center justify-center text-[10px] text-gray-400 font-semibold">{isOpen ? "Toca para ocultar" : "Toca para ver detalles"}</div>
                     </button>
                   );
                 })}
@@ -664,30 +728,61 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
           )}
 
           {tab === "notificaciones" && (
-            <div className="p-3 space-y-2">
-              {[
-                { icon: <Clock className="w-4 h-4 text-blue-600" />, bg: "bg-blue-50", msg: "Bus B001 llega en 8 minutos a Campus ESPOL. ¡Prepárate!", time: "hace 2 min", unread: true },
-                { icon: <AlertTriangle className="w-4 h-4 text-amber-600" />, bg: "bg-amber-50", msg: "Retraso en ruta Durán: aprox. 25 min por tráfico en el Puente Unidad Nacional.", time: "hace 15 min", unread: true },
-                { icon: <Users className="w-4 h-4 text-red-600" />, bg: "bg-red-50", msg: "Bus B003 (Albán Borja) está LLENO. Próxima salida 10:15.", time: "hace 32 min", unread: false },
-                { icon: <CheckCircle className="w-4 h-4 text-emerald-600" />, bg: "bg-emerald-50", msg: "Tu feedback para la ruta Interna fue revisado. ¡Gracias!", time: "hace 1h", unread: false },
-              ].map((n, i) => (
-                <div key={i} className={`bg-white rounded-2xl p-3.5 border ${n.unread ? "border-[#005DAA]/25" : "border-gray-100"} flex gap-3 items-start`}>
-                  <div className={`w-8 h-8 ${n.bg} rounded-full flex items-center justify-center shrink-0`}>{n.icon}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-xs leading-relaxed ${n.unread ? "font-semibold text-[#1C2B3A]" : "text-gray-500"}`}>{n.msg}</p>
-                    <p className="text-gray-400 text-[10px] mt-1">{n.time}</p>
-                  </div>
-                  {n.unread && <div className="w-2 h-2 bg-[#005DAA] rounded-full shrink-0 mt-1" />}
+            <div className="p-3 space-y-2.5">
+              {/* Barra de acciones */}
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-bold text-gray-500">
+                  {unreadCount > 0 ? `${unreadCount} sin leer` : "Todo al día ✓"}
+                </span>
+                <button onClick={markAllRead} disabled={unreadCount === 0}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#005DAA] disabled:text-gray-300 disabled:cursor-default transition-colors">
+                  <CheckCircle className="w-3.5 h-3.5" />Marcar todas como leídas
+                </button>
+              </div>
+
+              {notifs.length === 0 ? (
+                <div className="flex flex-col items-center py-16 text-gray-300">
+                  <Bell className="w-12 h-12 mb-2" /><p className="text-sm font-semibold">Sin notificaciones</p>
                 </div>
-              ))}
+              ) : notifs.map(n => {
+                const st = NOTIF_STYLE[n.kind];
+                return (
+                  <button key={n.id} onClick={() => toggleRead(n.id)}
+                    className={`w-full text-left rounded-2xl p-3.5 border flex gap-3 items-start transition-all ${n.read ? "bg-[#F8FAFD] border-gray-100" : "bg-white shadow-sm"}`}
+                    style={n.read ? undefined : { borderColor: `${st.ring}33` }}>
+                    <div className={`w-9 h-9 ${st.bg} rounded-xl flex items-center justify-center shrink-0 ${n.read ? "opacity-60" : ""}`}>{st.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs leading-relaxed ${n.read ? "text-gray-500" : "font-semibold text-[#1C2B3A]"}`}>{n.msg}</p>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <span className="text-gray-400 text-[10px]">{n.time}</span>
+                        <span className="text-[9px] font-bold" style={{ color: n.read ? "#9CA3AF" : st.ring }}>
+                          {n.read ? "Leída · toca para marcar no leída" : "Toca para marcar leída"}
+                        </span>
+                      </div>
+                    </div>
+                    {!n.read && <span className="w-2.5 h-2.5 rounded-full shrink-0 mt-1.5" style={{ background: st.ring }} />}
+                  </button>
+                );
+              })}
             </div>
           )}
 
           {tab === "cuenta" && (
             <div className="p-3 space-y-3">
-              <div className="bg-[#005DAA] rounded-2xl p-4 flex items-center gap-3">
-                <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center text-white font-extrabold text-xl">AS</div>
-                <div><div className="text-white font-extrabold text-base">Andrea Saltos E.</div><div className="text-blue-200 text-xs mt-0.5">MAET-P-202-2024 · FIMCM</div></div>
+              <div className="bg-gradient-to-br from-[#0A74D1] to-[#004A8F] rounded-2xl p-4 relative overflow-hidden">
+                <div className="absolute -right-6 -top-8 w-32 h-32 rounded-full bg-white/5" />
+                <div className="flex items-center gap-3 relative">
+                  <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-white font-extrabold text-xl border border-white/20">AS</div>
+                  <div><div className="text-white font-extrabold text-base">Andrea Saltos E.</div><div className="text-blue-100 text-xs mt-0.5">MAET-P-202-2024 · FIMCM</div></div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-4 relative">
+                  {[{ k: "Viajes", v: "128" }, { k: "Este mes", v: "24" }, { k: "Ahorro", v: "$31" }].map(s => (
+                    <div key={s.k} className="bg-white/10 rounded-xl py-2 text-center border border-white/10">
+                      <div className="text-white font-extrabold text-base">{s.v}</div>
+                      <div className="text-blue-100 text-[10px]">{s.k}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="bg-white rounded-2xl p-4 border border-gray-100">
                 <h3 className="font-extrabold text-[#1C2B3A] mb-4">Califica el servicio</h3>
@@ -716,14 +811,22 @@ function StudentApp({ onLogout }: { onLogout: () => void }) {
           <RoutePreview route={previewRoute} onClose={() => setPreviewRoute(null)} />
         )}
 
-        <div className="bg-white border-t border-gray-100 px-2 pb-3 pt-1.5 flex shrink-0">
-          {navItems.map(item => (
-            <button key={item.t} onClick={() => setTab(item.t)} className={`flex-1 flex flex-col items-center gap-0.5 py-1 rounded-xl transition-colors ${tab === item.t ? "text-[#005DAA]" : "text-gray-400"}`}>
-              {item.icon}
-              <span className="text-[9px] font-bold">{item.label}</span>
-              {tab === item.t && <div className="w-1 h-1 bg-[#005DAA] rounded-full" />}
-            </button>
-          ))}
+        <div className="bg-white border-t border-gray-100 px-3 pb-3 pt-2 flex gap-1 shrink-0">
+          {navItems.map(item => {
+            const active = tab === item.t;
+            return (
+              <button key={item.t} onClick={() => setTab(item.t)}
+                className={`flex-1 flex flex-col items-center gap-1 py-1.5 rounded-2xl transition-all ${active ? "bg-[#005DAA]/10 text-[#005DAA]" : "text-gray-400 hover:text-gray-600"}`}>
+                <span className="relative">
+                  {item.icon}
+                  {item.t === "notificaciones" && unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] px-0.5 bg-red-500 rounded-full border-2 border-white text-white text-[8px] font-bold flex items-center justify-center">{unreadCount}</span>
+                  )}
+                </span>
+                <span className={`text-[9px] ${active ? "font-extrabold" : "font-bold"}`}>{item.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -813,7 +916,7 @@ function SedareyDashboard({ onLogout }: { onLogout: () => void }) {
                 <PunctualityCard value={84} target={90} scope="Flota completa · Turno actual" subtitle="Tolerancia: ≤5 min de retraso" />
                 <div className="col-span-3 grid grid-cols-3 gap-3">
                   {[
-                    { label: "Buses Activos", value: "7 / 8", icon: <Bus className="w-4 h-4" />, color: "#005DAA", bg: "#EBF2FF" },
+                    { label: "Buses Activos", value: `${buses.filter(b => b.status !== "fuera_de_servicio").length} / ${buses.length}`, icon: <Bus className="w-4 h-4" />, color: "#005DAA", bg: "#EBF2FF" },
                     { label: "Pasajeros Hoy", value: "1,847", icon: <Users className="w-4 h-4" />, color: "#0891B2", bg: "#E0F7FF" },
                     { label: "Incidentes", value: "3", icon: <AlertTriangle className="w-4 h-4" />, color: "#D97706", bg: "#FEF9EC" },
                   ].map(k => (
@@ -1014,19 +1117,25 @@ function SedareyDashboard({ onLogout }: { onLogout: () => void }) {
                   </div>
                 ))}
               </div>
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-400" />
-                <div className="flex gap-1.5">
-                  {(["todos","queja","sugerencia","felicitacion"] as const).map(t => (
-                    <button key={t} onClick={() => setFbType(t)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${fbType===t?"bg-[#005DAA] text-white":"bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}>{t === "todos" ? "Todos" : fbTypeLabel[t]}</button>
-                  ))}
+              <div className="bg-white rounded-xl border border-border p-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold text-gray-400 uppercase tracking-wide"><Filter className="w-3.5 h-3.5" />Tipo</span>
+                  <div className="flex gap-1.5">
+                    {(["todos","queja","sugerencia","felicitacion"] as const).map(t => (
+                      <button key={t} onClick={() => setFbType(t)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${fbType===t?"bg-[#005DAA] text-white":"bg-[#F4F7FB] text-gray-600 hover:bg-gray-100"}`}>{t === "todos" ? "Todos" : fbTypeLabel[t]}</button>
+                    ))}
+                  </div>
                 </div>
-                <div className="w-px h-5 bg-gray-200 mx-1" />
-                <div className="flex gap-1.5">
-                  {(["todos","pendiente","resuelto"] as const).map(s => (
-                    <button key={s} onClick={() => setFbStatus(s)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${fbStatus===s?"bg-[#1C2B3A] text-white":"bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}>{s.charAt(0).toUpperCase() + s.slice(1)}</button>
-                  ))}
+                <div className="w-px h-6 bg-gray-200" />
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Estado</span>
+                  <div className="flex gap-1.5">
+                    {(["todos","pendiente","resuelto"] as const).map(s => (
+                      <button key={s} onClick={() => setFbStatus(s)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${fbStatus===s?"bg-[#1C2B3A] text-white":"bg-[#F4F7FB] text-gray-600 hover:bg-gray-100"}`}>{s.charAt(0).toUpperCase() + s.slice(1)}</button>
+                    ))}
+                  </div>
                 </div>
+                <span className="ml-auto text-xs text-gray-400">{filteredFb.length} resultado(s)</span>
               </div>
               <div className="space-y-3">
                 {filteredFb.map(fb => (
@@ -1169,10 +1278,14 @@ function SedareyDashboard({ onLogout }: { onLogout: () => void }) {
 
 // ─── ESPOL DASHBOARD ──────────────────────────────────────────
 
+type KpiKey = "punct" | "compliance" | "incidents" | "satisfaction";
+
 function EspolDashboard({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<EspolTab>("kpis");
   const [dateFrom, setDateFrom] = useState("2026-05-01");
   const [dateTo, setDateTo] = useState("2026-06-05");
+  const [kpiDetail, setKpiDetail] = useState<KpiKey | null>(null);
+  const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
 
   // Índice absoluto año*12+mes para comparar rangos que cruzan el año.
   const fromD = new Date(dateFrom + "T00:00:00");
@@ -1270,9 +1383,9 @@ function EspolDashboard({ onLogout }: { onLogout: () => void }) {
               )}
 
               <div className="grid grid-cols-4 gap-3">
-                <PunctualityCard value={avgPunctuality} target={90} scope="Todas las rutas · Período filtrado" subtitle="Tolerancia: ≤5 min de retraso" />
+                <PunctualityCard value={avgPunctuality} target={90} scope="Todas las rutas · Período filtrado" subtitle="Tolerancia: ≤5 min de retraso" onClick={() => setKpiDetail("punct")} />
 
-                <div className="bg-white rounded-xl p-5 border-2 border-blue-100 flex flex-col justify-between">
+                <button onClick={() => setKpiDetail("compliance")} className="text-left bg-white rounded-xl p-5 border-2 border-blue-100 flex flex-col justify-between cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all">
                   <div className="flex items-start justify-between mb-3">
                     <div><div className="text-xs text-muted-foreground font-semibold">Cumplimiento de Rutas</div><div className="text-[10px] text-gray-400 mt-0.5">Planificadas vs. ejecutadas</div></div>
                     <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">{avgCompliance >= 90 ? "✓ Meta" : "⚠ Revisar"}</span>
@@ -1290,9 +1403,10 @@ function EspolDashboard({ onLogout }: { onLogout: () => void }) {
                       );
                     })}
                   </div>
-                </div>
+                  <div className="mt-2 text-[10px] font-bold text-[#005DAA] flex items-center gap-1">Ver detalle<ChevronRight className="w-3 h-3" /></div>
+                </button>
 
-                <div className="bg-white rounded-xl p-5 border-2 border-red-100 flex flex-col justify-between">
+                <button onClick={() => setKpiDetail("incidents")} className="text-left bg-white rounded-xl p-5 border-2 border-red-100 flex flex-col justify-between cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all">
                   <div className="flex items-start justify-between mb-3">
                     <div><div className="text-xs text-muted-foreground font-semibold">Incidentes Críticos</div><div className="text-[10px] text-gray-400 mt-0.5">Por unidad / conductor</div></div>
                     <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">{criticalInc} con alerta</span>
@@ -1310,9 +1424,10 @@ function EspolDashboard({ onLogout }: { onLogout: () => void }) {
                       </div>
                     ))}
                   </div>
-                </div>
+                  <div className="mt-2 text-[10px] font-bold text-red-600 flex items-center gap-1">Ver detalle<ChevronRight className="w-3 h-3" /></div>
+                </button>
 
-                <div className="bg-white rounded-xl p-5 border-2 border-amber-100 flex flex-col justify-between">
+                <button onClick={() => setKpiDetail("satisfaction")} className="text-left bg-white rounded-xl p-5 border-2 border-amber-100 flex flex-col justify-between cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all">
                   <div className="flex items-start justify-between mb-3">
                     <div><div className="text-xs text-muted-foreground font-semibold">Satisfacción Neta</div><div className="text-[10px] text-gray-400 mt-0.5">{filteredFeedback.length} calificaciones</div></div>
                     <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{avgRating >= 4 ? "✓ Meta" : filteredFeedback.length === 0 ? "—" : "⚠ Por mejorar"}</span>
@@ -1325,7 +1440,8 @@ function EspolDashboard({ onLogout }: { onLogout: () => void }) {
                     </div>
                     <div className="flex justify-between text-[9px] text-gray-400 mt-0.5"><span>0</span><span className="text-amber-600 font-semibold">Meta: ≥4.0</span><span>5</span></div>
                   </div>
-                </div>
+                  <div className="mt-2 text-[10px] font-bold text-amber-600 flex items-center gap-1">Ver detalle<ChevronRight className="w-3 h-3" /></div>
+                </button>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1481,13 +1597,28 @@ function EspolDashboard({ onLogout }: { onLogout: () => void }) {
                   { bg: "bg-blue-50", border: "border-blue-200", icon: <Activity className="w-5 h-5 text-blue-600" />, title: `Satisfacción en ${avgRating > 0 ? avgRating.toFixed(1) : "—"}/5 — cerca de la meta`, body: "Quejas frecuentes: Bus lleno (34%) y No paró en parada (27%). Ver panel Satisfacción para detalle completo.", time: "Actualizado: hoy", badge: "MONITOREAR", badgeCls: "bg-blue-100 text-blue-800" },
                   { bg: "bg-emerald-50", border: "border-emerald-200", icon: <CheckCircle className="w-5 h-5 text-emerald-600" />, title: "Flota operativa al 87.5%", body: "7 de 8 unidades operativas. B006 fuera de servicio por falla mecánica — reparación en progreso en taller.", time: "Estado actual", badge: "NORMAL", badgeCls: "bg-emerald-100 text-emerald-800" },
                   { bg: "bg-red-50", border: "border-red-200", icon: <AlertTriangle className="w-5 h-5 text-red-600" />, title: "2 conductores con incidentes críticos", body: "Roberto Cedeño A. (4 incidentes, B006) y Miguel Alvarado V. (conducción temeraria, B002) requieren revisión disciplinaria.", time: "Última alerta: hoy 09:15", badge: "URGENTE", badgeCls: "bg-red-100 text-red-800" },
-                ].map((a, i) => (
-                  <div key={i} className={`${a.bg} border ${a.border} rounded-xl p-4`}>
-                    <div className="flex items-start gap-2.5 mb-2">{a.icon}<span className="font-extrabold text-[#1C2B3A] text-sm">{a.title}</span></div>
+                ].map((a, i) => dismissedAlerts.includes(i) ? null : (
+                  <div key={i} className={`${a.bg} border ${a.border} rounded-xl p-4 transition-all hover:shadow-md`}>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-start gap-2.5">{a.icon}<span className="font-extrabold text-[#1C2B3A] text-sm">{a.title}</span></div>
+                      <button onClick={() => setDismissedAlerts(d => [...d, i])} title="Descartar" className="text-gray-400 hover:text-gray-700 shrink-0"><X className="w-4 h-4" /></button>
+                    </div>
                     <p className="text-gray-700 text-sm leading-relaxed mb-3">{a.body}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-500"><span>{a.time}</span><span className={`px-2 py-0.5 rounded-full font-bold ${a.badgeCls}`}>{a.badge}</span></div>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>{a.time}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-full font-bold ${a.badgeCls}`}>{a.badge}</span>
+                        <button onClick={() => setDismissedAlerts(d => [...d, i])} className="px-2.5 py-0.5 rounded-full font-bold bg-white/70 border border-gray-200 text-gray-600 hover:bg-white">Atender</button>
+                      </div>
+                    </div>
                   </div>
                 ))}
+                {dismissedAlerts.length === 4 && (
+                  <div className="col-span-2 flex flex-col items-center py-10 text-emerald-500">
+                    <CheckCircle className="w-12 h-12 mb-2" /><p className="font-bold text-sm">Todas las alertas atendidas</p>
+                    <button onClick={() => setDismissedAlerts([])} className="mt-2 text-xs text-[#005DAA] font-bold hover:underline">Restaurar alertas</button>
+                  </div>
+                )}
               </div>
               <div className="bg-white rounded-xl p-4 border border-border">
                 <h3 className="font-extrabold text-[#1C2B3A] mb-3">Umbrales de Alerta Configurados</h3>
@@ -1514,6 +1645,86 @@ function EspolDashboard({ onLogout }: { onLogout: () => void }) {
           )}
         </div>
       </div>
+
+      {/* Modal de detalle de KPI (cards interactivas) */}
+      {kpiDetail && (
+        <div className="fixed inset-0 z-[3000] bg-black/40 flex items-center justify-center p-6" onClick={() => setKpiDetail(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+              <h3 className="font-extrabold text-[#1C2B3A]">
+                {kpiDetail === "punct" && "Puntualidad — Detalle"}
+                {kpiDetail === "compliance" && "Cumplimiento de Rutas — Detalle"}
+                {kpiDetail === "incidents" && "Incidentes Críticos — Detalle"}
+                {kpiDetail === "satisfaction" && "Satisfacción — Detalle"}
+              </h3>
+              <button onClick={() => setKpiDetail(null)} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-5 overflow-y-auto space-y-3">
+              {kpiDetail === "punct" && (
+                <>
+                  <p className="text-sm text-gray-600">Promedio del período: <strong className="text-[#1C2B3A]">{avgPunctuality}%</strong> (meta 90%).</p>
+                  {filteredPerformance.map(row => (
+                    <div key={row.month} className="flex items-center gap-3">
+                      <span className="text-xs text-gray-500 w-16">{row.month} {row.year}</span>
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${row.onTime}%`, background: row.onTime >= 85 ? "#059669" : "#D97706" }} /></div>
+                      <span className="text-xs font-bold text-gray-700 w-10 text-right">{row.onTime}%</span>
+                    </div>
+                  ))}
+                </>
+              )}
+              {kpiDetail === "compliance" && (
+                <>
+                  <p className="text-sm text-gray-600">Promedio global: <strong className="text-[#1C2B3A]">{avgCompliance}%</strong>.</p>
+                  {routeCompliance.map(r => {
+                    const pct = Math.round(r.executed / r.planned * 100);
+                    return (
+                      <div key={r.route} className="flex items-center gap-3">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: r.color }} />
+                        <span className="text-xs text-gray-600 flex-1">{r.route}</span>
+                        <span className="text-xs text-gray-400">{r.executed}/{r.planned} vueltas</span>
+                        <span className="text-xs font-bold text-gray-700 w-10 text-right">{pct}%</span>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+              {kpiDetail === "incidents" && (
+                <>
+                  <p className="text-sm text-gray-600">Total: <strong className="text-[#1C2B3A]">{driverIncidents.reduce((s, d) => s + d.count, 0)}</strong> incidentes · {criticalInc} conductores con alerta crítica.</p>
+                  {driverIncidents.filter(d => d.count > 0).map(d => (
+                    <div key={d.driver} className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-[#1C2B3A] flex items-center gap-1.5">{d.critical && <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />}{d.driver}</div>
+                        <div className="text-[10px] text-gray-400">{d.bus} · {d.types.join(", ") || "—"}</div>
+                      </div>
+                      <span className={`text-base font-extrabold ${d.count >= 3 ? "text-red-600" : "text-amber-600"}`}>{d.count}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+              {kpiDetail === "satisfaction" && (
+                <>
+                  <p className="text-sm text-gray-600">Promedio: <strong className="text-[#1C2B3A]">{avgRating > 0 ? avgRating.toFixed(1) : "—"}</strong>/5 · {filteredFeedback.length} calificaciones.</p>
+                  {[5,4,3,2,1].map(stars => {
+                    const count = filteredFeedback.filter(f => f.rating === stars).length;
+                    const pct = filteredFeedback.length > 0 ? Math.round(count / filteredFeedback.length * 100) : 0;
+                    return (
+                      <div key={stars} className="flex items-center gap-3">
+                        <span className="text-xs text-gray-500 w-8">{stars}★</span>
+                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} /></div>
+                        <span className="text-xs text-gray-500 w-14 text-right">{count} ({pct}%)</span>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+            <div className="px-5 py-3 border-t border-border bg-[#F8FAFD] text-right">
+              <button onClick={() => setKpiDetail(null)} className="px-4 py-2 bg-[#005DAA] text-white text-xs font-bold rounded-lg hover:bg-[#004C8C] transition-colors">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
