@@ -207,11 +207,22 @@ function BusMap({
   // Update route visibility when selectedRoute changes
   useEffect(() => {
     if (onlyRoute) return;
+    const map = mapRef.current;
     Object.entries(polylinesRef.current).forEach(([id, poly]) => {
       const rId = parseInt(id);
       const active = selectedRoute === 0 || selectedRoute === rId;
       poly.setStyle({ opacity: active ? 0.85 : 0.12, weight: active ? 5 : 2 });
     });
+    // Mostrar solo los buses de la ruta filtrada (oculta los de otras rutas)
+    if (map) {
+      buses.forEach(bus => {
+        const marker = markersRef.current[bus.id];
+        if (!marker) return;
+        const visible = selectedRoute === 0 || bus.routeId === selectedRoute;
+        if (visible) marker.addTo(map);
+        else marker.remove();
+      });
+    }
   }, [selectedRoute, onlyRoute]);
 
   // Animation interval
