@@ -1297,6 +1297,7 @@ function EspolDashboard({ onLogout }: { onLogout: () => void }) {
   const [dateTo, setDateTo] = useState("2026-06-05");
   const [kpiDetail, setKpiDetail] = useState<KpiKey | null>(null);
   const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
+  const [espolMapRoute, setEspolMapRoute] = useState(0);
 
   // Índice absoluto año*12+mes para comparar rangos que cruzan el año.
   const fromD = new Date(dateFrom + "T00:00:00");
@@ -1499,8 +1500,20 @@ function EspolDashboard({ onLogout }: { onLogout: () => void }) {
               </div>
 
               <div className="bg-white rounded-xl p-4 border border-border">
-                <h2 className="font-extrabold text-[#1C2B3A] text-sm mb-3">Flota en Tiempo Real — Vista Institucional</h2>
-                <BusMap height={260} />
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-extrabold text-[#1C2B3A] text-sm">Flota en Tiempo Real — Vista Institucional</h2>
+                  <div className="flex gap-3 flex-wrap justify-end">
+                    <button onClick={() => setEspolMapRoute(0)} className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors">
+                      <div className="w-3 h-3 rounded bg-gray-400" style={{ opacity: espolMapRoute === 0 ? 1 : 0.3 }} />Todas
+                    </button>
+                    {routes.filter(r => buses.some(b => b.routeId === r.id)).map(r => (
+                      <button key={r.id} onClick={() => setEspolMapRoute(espolMapRoute === r.id ? 0 : r.id)} className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors">
+                        <div className="w-3 h-3 rounded" style={{ background: r.color, opacity: espolMapRoute === 0 || espolMapRoute === r.id ? 1 : 0.3 }} />{r.shortName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <BusMap height={260} selectedRoute={espolMapRoute} />
               </div>
             </div>
           )}
